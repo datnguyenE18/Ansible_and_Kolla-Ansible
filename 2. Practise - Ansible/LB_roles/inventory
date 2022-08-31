@@ -1,0 +1,6 @@
+web1 ansible_ssh_host=192.168.23.143 ansible_ssh_private_key_file=/root/.ssh/id_rsa ansible_ssh_user=root
+web2 ansible_ssh_host=192.168.23.144 ansible_ssh_private_key_file=/root/.ssh/id_rsa ansible_ssh_user=root
+
+[webservers]
+web1
+web2

@@ -1,0 +1,144 @@
+# Sinh SSH-KEY
+- 
+  name: generate SSH key
+  hosts: 127.0.0.1
+  connection: local
+  
+  vars:
+    ssh_key_filename: id_rsa
+    agents:
+      - 192.168.23.143
+      - 192.168.23.144
+    root_password: "12345"
+    id_rsa_file: "/root/.ssh/id_rsa"
+
+  vars_prompt:
+    - name: "ssh_passphrase"
+      prompt: "Enter the passphrase for the SSH key"
+  
+  tasks:
+    - stat:
+        path: "{{ id_rsa_file }}"
+      register: op
+
+    - name: Generate SSH key "{{ssh_key_filename}}" on master
+      user:
+        name: "root"
+        generate_ssh_key: yes
+        ssh_key_type: rsa
+        ssh_key_bits: 4096
+        ssh_key_file: /root/.ssh/{{ssh_key_filename}}
+        ssh_key_passphrase: "{{ssh_passphrase}}"
+        force: no
+
+    - debug: 
+        msg: "Key pair already exists. Using the same key."
+      when: op.stat.exists
+
+    - name: Copy public key to the agents
+      command: sshpass -p "{{ root_password }}" ssh-copy-id -i "{{ id_rsa_file }}" root@"{{ item }}" -f -o StrictHostKeyChecking=no
+      with_items:
+        - "{{ agents }}"
+
+#===================================================================================================
+# Cài đặt Docker & Môi trường:
+-
+  name: Install Docker
+  hosts: webservers
+  tasks:
+      ###### Check installed docker
+    - name: "Check Docker"
+      command: 'rpm -qa | grep docker'
+      register: docker_is_existed
+
+    - mail:
+        to: datnguyen532k@gmail.com 
+        subject: Service Alert
+        body: "Docker is existed!"
+      when: docker_is_existed.stdout.find("docker") != -1
+
+      ###### Install Docker & Docker-Compose
+    - name: "update Yum"
+      command: yum update -y
+      when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "Install the yum-utils package"
+      command: yum install -y yum-utils
+      when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "Set up the stable repository"
+      command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "Install Docker Engine"
+      command: yum install -y docker-ce docker-ce-cli containerd.io
+      when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "Enable Docker"
+      service:
+        name: docker
+        enabled: yes
+      when: docker_is_existed.stdout.find("docker") != -1
+
+    - name: "Start Docker"
+      service:
+        name: docker
+        state: started
+      when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "Install Docker-compose"
+      command: yum install docker-compose-plugin -y
+      when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "clear yum cache"
+      command: yum clean all
+
+    ###### Environment Config
+    - name: "Enable ip_vs"
+      command: "{{item}}"
+      with_items:
+        - yum install ipvsadm
+        - modprobe ip_vs
+        - ipvsadm
+
+    - name: "net.ipv4"
+      command: "{{item}}"
+      with_items:
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv4.ip_nonlocal_bind=1
+
+    - name: "Add port"
+      command: "{{item}}"
+      with_items:
+        - firewall-cmd --add-port=80/tcp
+        - firewall-cmd --add-port=8404/tcp
+
+#===================================================================================================
+# Cài đặt Servers
+-
+  name: docker compose
+  hosts: webservers
+  tasks:
+    - name: copy src to remote
+      copy:
+        src: ./src
+        dest: .
+
+    - name: Install on Ansible_Target_1
+      command: docker compose up -d keepalived-a haproxy-a haproxy-b web-a web-b
+      args:
+        chdir: /root/src
+      when: ansible_hostname == "ansible_target_1"
+
+    - name: Install on Ansible_Target_2
+      command: docker compose up -d keepalived-b haproxy-a haproxy-b web-a web-b
+      args:
+        chdir: /root/src
+      when: ansible_hostname == "ansible_target_2"
+
+    - name: check connection
+      command: curl 192.168.23.145
+      register: result
+
+    - debug:
+        var: result.stdout_lines

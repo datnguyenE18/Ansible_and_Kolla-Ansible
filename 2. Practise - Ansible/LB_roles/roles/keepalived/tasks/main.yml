@@ -1,0 +1,39 @@
+---
+# tasks file for keepalived
+- name: setup keepalived-a
+  docker_container:
+    name: keepalived-a
+    image: "{{image}}"
+    state: started
+    detach: True
+    restart_policy: always
+    network_mode: host
+    privileged: True
+    capabilities:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
+    env:
+      KEEPALIVED_COMMAND_LINE_ARGUMENTS: log-detail
+    volumes:
+      - "./roles/keepalived/templates/keepalived-a.conf:/usr/local/etc/keepalived/keepalived.conf:ro"
+  when: ansible_hostname == "ansible_target_1" 
+
+- name: setup keepalived-b
+  docker_container:
+    name: keepalived-b
+    image: "{{image}}"
+    state: started
+    detach: True
+    restart_policy: always
+    network_mode: host
+    privileged: True
+    capabilities:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
+    env:
+      KEEPALIVED_COMMAND_LINE_ARGUMENTS: log-detail
+    volumes:
+      - "./roles/keepalived/templates/keepalived-b.conf:/usr/local/etc/keepalived/keepalived.conf:ro"
+  when: ansible_hostname == "ansible_target_2" 

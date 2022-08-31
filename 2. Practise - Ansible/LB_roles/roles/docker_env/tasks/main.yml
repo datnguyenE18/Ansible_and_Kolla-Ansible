@@ -1,0 +1,81 @@
+---
+# tasks file for docker_env
+  ###### Check installed docker
+- name: "Check Docker"
+  command: 'rpm -qa | grep docker'
+  register: docker_is_existed
+
+- mail:
+    to: datnguyen532k@gmail.com 
+    subject: Service Alert
+    body: "Docker is existed!"
+  when: docker_is_existed.stdout.find("docker") != -1
+
+  ###### Install Docker & Docker-Compose
+- name: "update Yum"
+  yum:
+    name: '*'
+    state: latest
+  when: docker_is_existed.stdout.find("docker") == -1
+
+    - name: "Install docker-py"
+      yum:
+        name: "*docker-py*"
+        state: latest
+      when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "Install the yum-utils package"
+  command: yum install -y yum-utils
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "Set up the stable repository"
+  command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "Install Docker Engine"
+  yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "Enable Docker"
+  service:
+    name: docker
+    enabled: yes
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "Start Docker"
+  service:
+    name: docker
+    state: started
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "Install Docker-compose"
+  command: yum install docker-compose-plugin -y
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "clear yum cache"
+  command: yum clean all
+
+###### Environment Config
+- name: "Enable ip_vs"
+  command: "{{item}}"
+  with_items:
+    - yum install ipvsadm
+    - modprobe ip_vs
+    - ipvsadm
+  when: docker_is_existed.stdout.find("docker") == -1
+
+- name: "net.ipv4"
+  command: "{{item}}"
+  with_items:
+    - sysctl -w net.ipv4.ip_forward=1
+    - sysctl -w net.ipv4.ip_nonlocal_bind=1
+
+- name: "Add port"
+  command: "{{item}}"
+  with_items:
+    - firewall-cmd --add-port=80/tcp
+    - firewall-cmd --add-port=8404/tcp

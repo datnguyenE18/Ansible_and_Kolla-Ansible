@@ -1,0 +1,25 @@
+---
+# tasks file for haproxy
+- name: setup haproxy-a
+  docker_container:
+    name: haproxy-a
+    image: "{{image}}"
+    networks: 
+      - name: "{{network}}"
+        ipv4_address: 172.20.0.50
+        aliases:
+          - haproxy-a
+    volumes:
+      - "./roles/haproxy/templates/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
+
+- name: setup haproxy-b
+  docker_container:
+    name: haproxy-b
+    image: "{{image}}"
+    networks: 
+      - name: "{{network}}"
+        ipv4_address: 172.20.0.60
+        aliases:
+          - haproxy-b
+    volumes:
+      - "./roles/haproxy/templates/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"

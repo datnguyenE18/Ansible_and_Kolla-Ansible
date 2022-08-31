@@ -1,0 +1,13 @@
+---
+- hosts: localhost
+  become: yes
+  roles:
+    - ssh_key
+
+- hosts: webservers
+  become: yes
+  roles:
+    - docker_env
+    - webnet
+    - haproxy
+    - keepalived

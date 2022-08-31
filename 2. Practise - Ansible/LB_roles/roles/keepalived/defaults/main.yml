@@ -1,0 +1,4 @@
+---
+# defaults file for keepalived
+image: "osixia/keepalived:latest"
+network: "host"

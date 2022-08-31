@@ -1,0 +1,9 @@
+---
+# vars file for ssh_key
+ssh_key_filename: id_rsa
+agents:
+  - 192.168.23.143
+  - 192.168.23.144
+root_password: "12345"
+id_rsa_file: "/root/.ssh/id_rsa"
+ssh_passphrase: ""

@@ -1,0 +1,26 @@
+---
+# tasks file for web
+- name: Create a network
+  docker_network:
+    name: "{{network}}"
+    ipam_config:
+      - subnet: '172.20.0.0/24'
+        gateway: '172.20.0.1'
+
+- name: setup web-a
+  docker_container:
+    name: web-a
+    image: "{{image}}"
+    networks: 
+      - name: "{{network}}"
+    volumes:
+      - "./roles/webnet/templates/servera.html:/usr/share/nginx/html/index.html:ro"
+
+- name: setup web-b
+  docker_container:
+    name: web-b
+    image: "{{image}}"
+    networks: 
+      - name: "{{network}}"
+    volumes:
+      - "./roles/webnet/templates/serverb.html:/usr/share/nginx/html/index.html:ro"
